@@ -78,6 +78,4 @@ def parse_task(name):
 
 
 if __name__ == '__main__':
-    # f = open("domain.pddl", "r")
-    #  parse_domain(f)
-    parse_task("gil_task.pddl")
+    parse_task("test_task.pddl")

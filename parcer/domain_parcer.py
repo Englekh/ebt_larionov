@@ -345,10 +345,7 @@ def parse_domain(file):
 
 
 if __name__ == '__main__':
-    # f = open("domain.pddl", "r")
-    #  parse_domain(f)
     parse_domain("test_domain2.pddl")
-    #it = DomainIterator("gil.pddl")
-    #print(get_operator(it))
+   
 
 

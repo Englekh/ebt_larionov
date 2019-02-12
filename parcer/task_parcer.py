@@ -73,9 +73,11 @@ def parse_task(name):
     ans.pred = get_prdeicates(iter)
     iter.next()
     iter.next()
-    ans.goal = dp.get_pred1(iter)
+    ans.goal = dp.get_preds1(iter)[0]
     return ans
 
 
 if __name__ == '__main__':
+    # f = open("domain.pddl", "r")
+    #  parse_domain(f)
     parse_task("test_task.pddl")

@@ -15,6 +15,7 @@ class DomainIterator:
         self.buf = get_line(self.f).split()
         self.b_count = 0
         self.pos = 0
+        self.line_count = 1
         for s in self.buf[self.pos]:
             if s == '(':
                 self.b_count += 1
@@ -26,6 +27,7 @@ class DomainIterator:
             self.pos += 1
         else:
             self.pos = 0
+            self.line_count += 1
             self.buf = get_line(self.f).split()
 
         for s in self.buf[self.pos]:
@@ -36,6 +38,9 @@ class DomainIterator:
 
     def wrd(self):
         return self.buf[self.pos].lstrip("(").rstrip(")")
+
+    def cwrd(self):
+        return self.buf[self.pos]
 
 
 class Object:
@@ -50,10 +55,22 @@ class Object:
         return "(" + str(self.name) + ", " + str(self.type) + ")"
 
 
-class Predicate:
+class LongPredicate:
     def __init__(self, nam):
         self.name = nam
-        self.params = set()
+        self.params = []
+
+    def __str__(self):
+        return str(self.name) + ': ' + str(self.params)
+
+    def __repr__(self):
+        return str(self.name) + ": " + str(self.params)
+
+
+class ShortPredicate:
+    def __init__(self, nam):
+        self.name = nam
+        self.params = []
 
     def __str__(self):
         return str(self.name) + ': ' + str(self.params)
@@ -64,38 +81,38 @@ class Predicate:
 
 class Axiom:
     def __init__(self):
-        self.params = set()
-        self.postcond = set()
+        self.params = []
+        self.postcond = []
 
     def __str__(self):
-        return "(" + str(self.params) + "|" + str(self.postcond) + ")"
+        return "(" + str(self.params) + " | " + str(self.postcond) + ")"
 
     def __repr__(self):
-        return "(" + str(self.params) + "|" + str(self.postcond) + ")"
+        return "(" + str(self.params) + " | " + str(self.postcond) + ")"
 
 
 class Task:
     def __init__(self, name):
         self.name = name
+        self.params = []
         self.type = 0
-        self.subtype = 0
-        self.params = set()
         # 0 - primitive, 1 - compound
-        self.thing = []
+        self.things = []
 
     def __str__(self):
         return "(task -" + str(self.name) + "," + str(self.type) + ";" +\
-               str(self.params) + "\n :" + str(self.thing) + ")"
+               str(self.params) + "\n :" + str(self.things) + ")"
 
     def __repr__(self):
         return "(task -" + str(self.name) + "," + str(self.type) + ";" +\
-               str(self.params) + "\n :" + str(self.thing) + ")"
+               str(self.params) + "\n :" + str(self.things) + ")"
 
 
 class Operator:
-    def __init__(self, precond, effect):
-        self.precond = precond
-        self.effect = effect
+    def __init__(self, name):
+        self.name = name
+        self.precond = []
+        self.effect = []
 
     def __str__(self):
         return "oper - " + str(self.precond) + ";" + str(self.effect) + ")\n"
@@ -104,13 +121,14 @@ class Operator:
         return "oper - " + str(self.precond) + ";" + str(self.effect) + ")\n"
 
 
-
-
 class Method:
-    def __init__(self, precond, effect, params):
-        self.params = params
-        self.precond = precond
-        self.subtask = effect
+    def __init__(self, name):
+        self.name = name
+        self.type = 0
+        self.priority = 0
+        # 0 - line, 1 - parralel
+        self.precond = []
+        self.subtask = []
 
     def __str__(self):
         return "oper - " + str(self.precond) + ";" + str(self.subtask) + ")\n"
@@ -132,11 +150,11 @@ class Domain:
 # main functions
 
 
-def get_params_and_names(it):
+def get_name_and_params(it):
     name = it.wrd()
-    params = set()
+    params = []
     buf = []
-    ans = Predicate(name)
+    ans = LongPredicate(name)
     count = it.b_count
     it.next()
     while count <= it.b_count:
@@ -149,7 +167,7 @@ def get_params_and_names(it):
             while it.wrd().isspace() or it.wrd() == "":
                 it.next()
             for el in buf:
-                params.add(Object(el, it.wrd()))
+                params.append(Object(el, it.wrd()))
             buf.clear()
             if it.b_count >= count:
                 it.next()
@@ -161,99 +179,21 @@ def get_params_and_names(it):
 
 # main  ===============================
 def get_requirements(it):
-    ans = set()
+    ans = []
     count = it.b_count
     it.next()
     while count == it.b_count:
         if not (it.wrd().isspace() or it.wrd() == ""):
-            ans.add(it.wrd())
+            ans.append(it.wrd())
         it.next()
     if not (it.wrd().isspace() or it.wrd() == ""):
-        ans.add(it.wrd())
+        ans.append(it.wrd())
     it.next()
     return ans
-
-
-def get_predicates(it):
-    ans = set()
-    count = it.b_count
-    it.next()
-    while count <= it.b_count:
-        ans.add(get_params_and_names(it))
-    return ans
-
-
-def get_pred1(it):
-    name = it.wrd()
-    preds = []
-    count = it.b_count
-    it.next()
-    while count == it.b_count:
-        if not (it.wrd().isspace() or it.wrd() == ""):
-            preds.append(it.wrd())
-        it.next()
-    if not (it.wrd().isspace() or it.wrd() == ""):
-        preds.append(it.wrd())
-    if it.b_count > 0:
-        it.next()
-    return name, preds
-
-
-def get_preds1(it):
-    if it.wrd() == "and":
-        it.next()
-    count = it.b_count
-    pred = []
-    npred = []
-    while count <= it.b_count:
-        if it.wrd() == "not":
-            it.next()
-            npred.append(get_pred1(it))
-        else:
-            pred.append(get_pred1(it))
-    return pred, npred
-
-
-def get_operator(it):
-    it.next()
-    task = get_params_and_names(it)
-    precond = get_preds1(it)
-    end = get_preds1(it)
-    return task, precond, end
-
-
-def get_preds2(it):
-    print(it.wrd())
-    if it.wrd() == ":ordered":
-        type = 1
-        it.next()
-    else:
-        type = 2
-        it.next()
-    count = it.b_count
-    pred = []
-    npred = []
-    while count <= it.b_count:
-        if it.wrd() == "not":
-            it.next()
-            npred.append(get_pred1(it))
-        else:
-            pred.append(get_pred1(it))
-    return (pred, npred),  type
-
-
-def get_method(it):
-    it.next()
-    task = get_params_and_names(it)
-    precond = get_preds1(it)
-    end = get_preds2(it)
-    return task, precond[0], end, precond[1]
 
 
 def get_types(it):
     count = it.b_count
-    if it.wrd() == "and":
-        return dict()
     it.next()
     ans = dict()
     buf = []
@@ -277,9 +217,12 @@ def get_types(it):
             buf.clear()
             if it.b_count == count:
                 it.next()
+    if len(buf) > 0:
+        if not (it.wrd().isspace() or it.wrd() == ""):
+            buf.append(it.wrd())
     for el in buf:
         if not ans.get(el):
-            ans[el] = []
+            ans[el] = set()
     it.next()
 
     for obj in archetypes:
@@ -290,12 +233,97 @@ def get_types(it):
     return ans
 
 
+def get_predicates(it):
+    ans = set()
+    count = it.b_count
+    it.next()
+    while count <= it.b_count:
+        ans.add(get_name_and_params(it))
+    return ans
+
+
+def get_short(it):
+    ans = ShortPredicate("")
+    ans.name = it.wrd()
+    count = it.b_count
+    it.next()
+    while count == it.b_count:
+        if not (it.wrd().isspace() or it.wrd() == ""):
+            ans.params.append(it.wrd())
+        it.next()
+    if not (it.wrd().isspace() or it.wrd() == ""):
+        ans.params.append(it.wrd())
+    if it.b_count > 0:
+        it.next()
+    return ans
+
+
+def get_preds1(it):
+    count = it.b_count
+    pred = []
+    npred = []
+    while count <= it.b_count:
+        if it.wrd() == "not":
+            it.next()
+            npred.append(get_short(it))
+        else:
+            pred.append(get_short(it))
+    return pred, npred
+
+
 def get_axiom(it):
     it.next()
     ans = Axiom()
-    ans.params = get_pred1(it)
-    ans.postcond = get_preds1(it)
+    ans.params = get_preds1(it)[0]
+    ans.postcond = get_preds1(it)[0]
     return ans
+
+
+def get_base_tasks(it):
+    it.next()
+    ans = dict()
+    count = it.b_count
+    while count <= it.b_count:
+        nt = get_name_and_params(it)
+        ans[nt.name] = Task(nt.name)
+        ans[nt.name].params = nt.params
+    return ans
+
+
+def get_operator(it, dct):
+    it.next()
+    nm = it.wrd()
+    it.next()
+    on = it.wrd()
+    it.next()
+    oper = Operator(on)
+    oper.name = on
+    oper.precond = get_preds1(it)
+    oper.effect = get_preds1(it)
+    dct[nm].type = 0
+    dct[nm].things.append(oper)
+    return 0
+
+
+def get_method(it, dct):
+    it.next()
+    nm = it.wrd()
+    it.next()
+    on = it.wrd()
+    it.next()
+    method = Method(on)
+    if it.wrd() == "ordered":
+        method.type = 0
+    else:
+        method.type = 1
+    it.next()
+    method.priority = int(it.wrd())
+    it.next()
+    method.precond = get_preds1(it)
+    method.subtask = get_preds1(it)
+    dct[nm].type = 1
+    dct[nm].things.append(method)
+    return 0
 
 
 def parse_domain(file):
@@ -318,34 +346,29 @@ def parse_domain(file):
         if iter.wrd() == ":predicates":
             ans.pred = get_predicates(iter)
         # ===============================
+        if iter.wrd() == ":tasks":
+            ans.tasks = get_base_tasks(iter)
+        # ===============================
         if iter.wrd() == ":-":
             ans.axioms.add(get_axiom(iter))
         # ===============================
         if iter.wrd() == ":operator":
-            op = get_operator(iter)
-            task = op[0].name
-            ans.tasks[task] = Task(task)
-            ans.tasks[task].type = 0
-            ans.tasks[task].params = op[0].params
-            ans.tasks[task].thing = Operator(op[1], op[2])
+            get_operator(iter, ans.tasks)
         # ===============================
         if iter.wrd() == ":method":
-            op = get_method(iter)
-            task = op[0].name
-            if not ans.tasks.get(task):
-                ans.tasks[task] = Task(task)
-                ans.tasks[task].type = 1
-            ans.tasks[task].subtype = op[3]
-            ans.tasks[task].thing = Method(op[1], op[2], op[0].params)
+            get_method(iter, ans.tasks)
         if (iter.wrd().isspace() or iter.wrd() == "") and iter.b_count > 0:
             iter.next()
-    print(ans.req)
+    print(ans.axioms)
 
     return ans
 
 
 if __name__ == '__main__':
-    parse_domain("test_domain2.pddl")
-   
+    # f = open("domain.pddl", "r")
+    #  parse_domain(f)
+    parse_domain("test_domain.pddl")
+    #it = DomainIterator("gil.pddl")
+    #print(get_operator(it))
 
 

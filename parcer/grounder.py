@@ -8,6 +8,7 @@ class GrounderAns:
         self.tasks = []
         self.init_state = []
         self.types = []
+        self.axioms = []
 
 
 class TreeTask:

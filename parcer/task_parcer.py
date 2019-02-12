@@ -1,5 +1,6 @@
 import domain_parcer as dp
 
+
 class Problem:
     def __init__(self):
         self.name = ""

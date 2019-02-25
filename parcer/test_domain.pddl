@@ -18,9 +18,6 @@
 	                (lay ?now - place ?o - object ?r - robot)
 	)
 
-    (:-             (( ) )
-                    ((same ?a ?a) )
-    )
 
     (:operator      take    take_o
                     ((r_in ?now) (on ?o ?now) not (has_sth ?r) )

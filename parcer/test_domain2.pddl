@@ -25,8 +25,8 @@
     )
 
     (:operator      lay    lay_o
-                    (not (on ?o ?now) (got ?r ?o) (has_sth ?r) )
-                    ((r_in ?r ?now) (on ?o ?now) not (has_sth ?r) not (got ?r ?o) )
+                    ((r_in ?r ?now) not (on ?o ?now) (got ?r ?o) (has_sth ?r) )
+                    ((on ?o ?now) not (has_sth ?r) not (got ?r ?o) )
     )
 
     (:operator      go_to    go_to_o
@@ -40,7 +40,7 @@
     )
 
     (:method        get_from go_and_take ordered 2
-                    (not (same ?from ?now) (on ?o ?from) not (has_sth ?r) )
+                    ((r_in ?r ?now) not (same ?from ?now) (on ?o ?from) not (has_sth ?r) )
                     ((go_to ?now ?from ?r) (take ?from ?o ?r) (go_to ?from ?now ?r) (lay ?now ?o ?r) )
     )
 

@@ -68,7 +68,7 @@ def apply_new(ans_ef, new_ef):
         for c in range(0, len(pos)):
             ans_ef[1].pop(pos[c] - c)
 
-# false to true
+    # false to true
     for pred in new_ef[1]:
         counter = 0
         pos = []
@@ -85,6 +85,32 @@ def apply_new(ans_ef, new_ef):
             counter += 1
         for c in range(0, len(pos)):
             ans_ef[0].pop(pos[c] - c)
+
+
+def applyLemma2(ans_ef, new_ef):
+    params = set()
+    for el in ans_ef[0]:
+        for par in el.params:
+            params.add(par)
+    for el in ans_ef[1]:
+        for par in el.params:
+            params.add(par)
+    n_new_ef = ([], [])
+    for el in new_ef[0]:
+        flag = False
+        for p in el.params:
+            if p in params:
+                flag = True
+        if flag:
+            n_new_ef[0].append(el)
+    for el in new_ef[1]:
+        flag = False
+        for p in el.params:
+            if p in params:
+                flag = True
+        if flag:
+            n_new_ef[1].append(el)
+    apply_new(ans_ef, n_new_ef)
 
 
 def build_effects(node):
@@ -108,8 +134,8 @@ class EbtElem:
         # 0 - line, 1 - parralel
         self.type = 0
         # 0 - none, 1 - line, 2 - paralel
-        self.preWs = []
-        self.postWs = []
+        self.preWs = dict()
+        self.postWs = dict()
         self.params = []
         self.precond = ([], [])
         self.effect = ([], [])
@@ -152,7 +178,7 @@ class Visitor:
     def __getElem__(self):
         return self.list[self.num]
 
-    def __goDeep__(self, ord):
+    def __goDeepNext__(self, ord):
         if ord != len(self.__getElem__().sub) and ord != -1:
             self.num = self.list[self.__getElem__().sub[ord]].num
             self.pos = -1
@@ -161,32 +187,42 @@ class Visitor:
         else:
             self.pos = len(self.__getElem__().sub)
 
+    def __goDeepPrev__(self, ord):
+        if ord != len(self.__getElem__().sub) and ord != -1:
+            self.num = self.list[self.__getElem__().sub[ord]].num
+            self.pos = len(self.list[self.num].sub)
+        elif ord == -1:
+            self.pos = -1
+        else:
+            self.pos = len(self.__getElem__().sub)
+
     def __goUp__(self):
-        self.pos = self.__getElem__().parentPos
-        self.num = self.__getElem__().parent
+        if self.__getElem__().parent != -1:
+            self.pos = self.__getElem__().parentPos
+            self.num = self.__getElem__().parent
 
     def next(self):
         if self.pos == -1:
-            self.__goDeep__(0)
+            self.__goDeepNext__(0)
         else:
             if self.__getElem__().arch == 1:
                 return False
             self.__goUp__()
             self.pos += 1
-            self.__goDeep__(self.pos)
+            self.__goDeepNext__(self.pos)
             if self.list[self.num].type == 0:
                 self.pos = 0
         return True
 
     def prev(self):
         if self.__getElem__().type == 1 and self.pos == len(self.__getElem__().sub):
-            self.__goDeep__(len(self.__getElem__().sub) - 1)
+            self.__goDeepPrev__(len(self.__getElem__().sub) - 1)
         else:
             if self.__getElem__().parent == -1:
                 return False
             self.__goUp__()
             self.pos -= 1
-            self.__goDeep__(self.pos)
+            self.__goDeepPrev__(self.pos)
             if self.list[self.num].type == 0:
                 self.pos = 0
         return True
@@ -194,20 +230,20 @@ class Visitor:
     def addStart(self, node):
         if self.pos == -1:
             self.__goUp__()
-            if self.__getElem__().type == 0:
+            if self.__getElem__().processor == 0:
                 # Making parralel
                 el = EbtElem()
                 el.name = "Paralel"
                 el.num = len(self.list)
                 el.parent = self.num
                 el.parentPos = self.pos
-                el.processor = 0
+                el.processor = 1
                 el.type = 1
-                el.preWs = self.list[self.getEl().sub[self.pos]].preWs
+                el.preWs = self.list[self.__getElem__().sub[self.pos]].preWs
+                el.postWs = dict()
                 el.params = []
                 el.arch = 0
                 el.sub = []
-                el.sub.append(self.getEl().sub[self.pos])
 
                 # Making new el
                 n_el = EbtElem()
@@ -215,26 +251,29 @@ class Visitor:
                 n_el.num = len(self.list) + 1
                 n_el.parent = len(self.list)
                 n_el.parentPos = 0
-                n_el.processor = node.type -1
+                n_el.preWs = el.preWs
+                n_el.postWs = dict()
+                n_el.processor = node.type - 1
                 n_el.params = node.params
                 n_el.precond = node.precond
                 n_el.effect = ([], [])
                 n_el.arch = 1
                 n_el.sub = []
-
+                if node.type == 0:
+                    n_el.type = 0
+                else:
+                    n_el.type = 1
                 # changing prev
-                prev = self.list[self.getEl().sub[self.pos]]
+                prev = self.list[self.__getElem__().sub[self.pos]]
                 prev.parent = n_el.parent
                 prev.parentPos = 1
 
                 # changing things
                 self.list.append(el)
                 self.list.append(n_el)
-                self.getEl().sub[self.pos] = el.num
+                self.__getElem__().sub[self.pos] = el.num
                 el.sub.append(n_el.num)
                 el.sub.append(prev.num)
-
-
             else:
                 # Making new el
                 n_el = EbtElem()
@@ -248,12 +287,19 @@ class Visitor:
                 n_el.effect = ([], [])
                 n_el.arch = 1
                 n_el.sub = []
+                n_el.preWs = self.__getElem__().preWs
+                n_el.postWs = dict()
+                if node.type == 0:
+                    n_el.type = 0
+                else:
+                    n_el.type = 1
 
                 self.__getElem__().sub.insert(0, n_el.num)
+                self.list.append(n_el)
                 for i in range(len(self.__getElem__().sub)):
                     self.list[self.__getElem__().sub[i]].parentPos = i
-                self.list.append(n_el)
         else:
+            
             # Making new el
             n_el = EbtElem()
             n_el.name = node.name
@@ -262,25 +308,33 @@ class Visitor:
             n_el.parentPos = len(self.__getElem__().sub)
             n_el.processor = node.type - 1
             n_el.params = node.params
+            n_el.preWs = self.__getElem__().postWs
+            n_el.postWs = dict()
             n_el.precond = node.precond
             n_el.effect = ([], [])
             n_el.arch = 1
             n_el.sub = []
+            if node.type == 0:
+                n_el.type = 0
+            else:
+                n_el.type = 1
 
             self.__getElem__().sub.append(n_el.num)
             self.list.append(n_el)
-            self.pos += 1
+        self.num = len(self.list) - 1
+        self.pos = -1
 
     def addEnd(self, node):
         self.__getElem__().effect = node.effect
         self.__getElem__().arch = 0
 
     def nowEl(self):
-        ans = self.list[self.num]
+        ans = copy.deepcopy(self.list[self.num])
         if self.pos == -1:
             ans.effect = ([], [])
         if self.pos == len(self.__getElem__().sub):
             ans.precond = ([], [])
+        return ans
 
     def redoAll(self):
         flag = True
@@ -300,19 +354,31 @@ class Visitor:
         return self.pos == -1 and self.__getElem__().type == 1 and self.__getElem__().processor == 1
 
     def fixAll(self):
-        buf = self.__getElem__().preWs
+        self.prev()
+        buf = copy.deepcopy(self.nowWs())
+        self.next()
         if self.isEnd():
-            self.__getElem__().postWs = ht.apply_effects(buf, self.__getElem__().effect)
+            ht.apply_effects(buf, self.__getElem__().effect[0])
+            ht.apply_not_effects(buf, self.__getElem__().effect[1])
+            self.__getElem__().postWs = buf
+            buf = self.__getElem__().postWs
+        else:
+            self.__getElem__().preWs = buf
+            buf = copy.deepcopy(buf)
         while self.next():
             # print(self.pos, self.num)
             if self.isEnd():
-                self.__getElem__().postWs = ht.apply_effects(buf, self.__getElem__().effect)
+                ht.apply_effects(buf, self.__getElem__().effect[0])
+                ht.apply_not_effects(buf, self.__getElem__().effect[1])
+                self.__getElem__().postWs = buf
+                buf = self.__getElem__().postWs
             else:
                 self.__getElem__().preWs = buf
+        print("111")
 
-    def print(self, file,  num, base):
-        file.write(base + str(self.list[num]))
-        if self.list[num].type == 1:
+    def print(self, file, num, base):
+        file.write(base + str(self.list[num].name) + str(self.list[num].params) + "\n")
+        if self.list[num].type == 1 and self.list[num].processor == 1:
             base += "||"
         base += "\t"
         for n in self.list[num].sub:
@@ -326,8 +392,6 @@ class Visitor:
         for el in range(len(self.list)):
             print(el, self.list[el].name, self.list[el].params, self.list[el].parent, self.list[el].parentPos,
                   self.list[el].sub)
-
-
 
 
 def check_ax1(state, elem2):
@@ -363,10 +427,6 @@ def check_axes(state, elem1, elem2):
 
 
 def preProcessNode(visitor, node):
-    print(visitor.pos, visitor.num)
-    visitor.prev()
-    print(visitor.pos, visitor.num)
-    print("pre process start", node.name)
     world_state = copy.deepcopy(visitor.nowWs())
     # remove redundant procedure
     if (ht.check_all_precond(world_state, node.effect[0])) and not ht.check_any_precond(world_state, node.effect[1]):
@@ -374,29 +434,36 @@ def preProcessNode(visitor, node):
         node.subtasks.clear()
         return True
     # moveback the node front
-    print("node not redundant")
     flag = 1
-    print(visitor.pos, visitor.num)
-    w_bool = flag == 1 and visitor.prev()
-    print(w_bool)
+    w_bool = (flag == 1) and (visitor.prev())
     while w_bool:
-        if not check_axes(visitor.nowWs(), visitor.nowEl(), node):
+        print(visitor.nowWs())
+        if visitor.__getElem__().type == 0:
+            visitor.prev()
+            ws = copy.deepcopy(visitor.nowWs())
+            visitor.next()
+        else:
+            ws = copy.deepcopy(visitor.nowWs())
+        if not check_axes(ws, visitor.nowEl(), node):
+            visitor.next()
             flag = 0
         elif (visitor.nowEl().type != 0) and (visitor.pos == -1):
-            apply_new(node.precond, visitor.nowEl().precond)
+            applyLemma2(node.precond, visitor.nowEl().precond)
         w_bool = flag == 1 and visitor.prev()
-        print(w_bool)
+    # visitor.next()
     print("went back")
-    while visitor.isEnd() or visitor.isParStart():
+    while (visitor.isEnd() or visitor.isParStart()) and visitor.__getElem__().arch != 1:
         visitor.next()
 
     visitor.addStart(node)
+    visitor.fixAll()
     return True
 
 
 def postProcessNode(visit, node):
     visit.addEnd(node)
     visit.fixAll()
+    return True
 
 
 def process_ebt(visitor, node):
@@ -408,6 +475,7 @@ def process_ebt(visitor, node):
             return False
     if not postProcessNode(visitor, node):
         return False
+    return True
 
 
 def first_process(visitor, node):
@@ -435,7 +503,7 @@ if __name__ == '__main__':
     # tree is build
     print(ini2)
     tree = Visitor(ini2, root)
-    first_process(tree, root)
+    print(first_process(tree, root))
     file = open("ans.txt", "w")
     tree.print(file, 0, "")
     file.close()

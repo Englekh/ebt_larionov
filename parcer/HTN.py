@@ -169,4 +169,4 @@ if __name__ == '__main__':
     task_name = sys.argv[2]
     ans = gr.ground_files(domain_name, task_name)
     for task in ans.tasks:
-        print(htn_search(ans.init_state, task)[2])
+        print(htn_search(ans.init_state, task))

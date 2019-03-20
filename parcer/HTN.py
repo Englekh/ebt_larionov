@@ -13,15 +13,29 @@ class ansTask:
         self.precond = ([], [])
         self.effect = ([], [])
         self.arch = 0
+        # 0 - line, 1 - parralel
 
     def __str__(self):
-        return "task " + str(self.name) + ":" + str(self.params) + ' subtasks:\n' + str(self.subtasks) + "\n"
+        if self.type == 1:
+            return "task " + str(self.name) + ":" + str(self.params) + "\nprecond: " + str(self.precond) + \
+                   "\neffect:" + str(self.effect) + ' subtasks:\n' + str(self.subtasks) + "\n"
+        else:
+            return "oper: " + str(self.name) + ":" + str(self.params) + "\nprecond: " + str(self.precond) + \
+                   "\neffect:" + str(self.effect) + "\n"
 
     def __repr__(self):
-        return "task " + str(self.name) + ":" + str(self.params) + ' subtasks:\n' + str(self.subtasks) + "\n"
+        if self.type == 1:
+            return "task " + str(self.name) + ":" + str(self.params) + "\nprecond: " + str(self.precond) + \
+                   "\neffect:" + str(self.effect) + ' subtasks:\n' + str(self.subtasks) + "\n"
+        else:
+            return "oper: " + str(self.name) + ":" + str(self.params) + "\nprecond: " + str(self.precond) + \
+                   "\neffect:" + str(self.effect) + "\n"
 
 
 def check_precond(dic, oper):
+    if not (dic.get(oper.name)):
+        print("key not found", oper.name)
+        return False
     for i in range(len(dic[oper.name])):
         counter = 0
         for j in range(len(dic[oper.name][i])):
@@ -49,6 +63,8 @@ def check_any_precond(dic, opers):
 def apply_not_effects(dic, opers):
     for oper in opers:
         i = 0
+        if not dic.get(oper.name):
+            dic[oper.name] = []
         ran = len(dic[oper.name])
         while i < ran:
             counter = 0
@@ -64,7 +80,21 @@ def apply_not_effects(dic, opers):
 
 def apply_effects(dic, opers):
     for oper in opers:
-        dic[oper.name].append(oper.params)
+        i = 0
+        if not dic.get(oper.name):
+            dic[oper.name] = []
+        ran = len(dic[oper.name])
+        flag = 0
+        while i < ran:
+            counter = 0
+            for j in range(len(dic[oper.name][i])):
+                if dic[oper.name][i][j] != oper.params[j]:
+                    counter += 1
+            if counter == 0:
+                flag = 1
+            i += 1
+        if flag == 0:
+            dic[oper.name].append(oper.params)
 
 
 def htn_search_m(predicates, method):
@@ -80,6 +110,7 @@ def htn_search_m(predicates, method):
             i += 1
         else:
             i -= 1
+            sub.pop()
             predicates = buf.pop()
     if i < 0:
         return False, [], []
@@ -125,6 +156,7 @@ def htn_search(predicates, task):
                     ans.params = task.params
                     ans.type = 1
                     ans.subtasks = mAns[2]
+                    ans.arch = task.methods[i].type
                     return True, mAns[1], ans
                 task.run += 1
         i += 1
@@ -137,4 +169,4 @@ if __name__ == '__main__':
     task_name = sys.argv[2]
     ans = gr.ground_files(domain_name, task_name)
     for task in ans.tasks:
-        print(htn_search(ans.init_state, task))
+        print(htn_search(ans.init_state, task)[2])

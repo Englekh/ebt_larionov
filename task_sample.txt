@@ -1,0 +1,10 @@
+;описание того как задавать домейн, [любое число элементов], вариант1/вариант2. 
+
+((define (problem "problem_name")
+	(:domain "domain name")
+
+	(:objects 	[["type"] - "type"] )
+	(:init		[("predicate_name" ["params"])])
+	(:goal		[("task_name" ["params"])] )
+	
+)

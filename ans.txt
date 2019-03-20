@@ -1,0 +1,5 @@
+MAIN[]
+	Paralel[]
+	||	go_to_o['p4', 'p5', 'r3']
+	||	go_to_o['p2', 'p3', 'r2']
+	||	go_to_o['p1', 'p0', 'r1']

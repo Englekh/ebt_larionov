@@ -13,11 +13,19 @@ class GrounderAns:
 
 class TreeTask:
     def __init__(self):
+        self.run = 0
         self.name = ""
         self.type = 0
         # 0 -primitive, 1-compound
         self.methods = []
         self.operator = []
+        self.params = []
+
+    def __str__(self):
+        return "task " + str(self.name) + ' methods:\n' + str(self.methods)
+
+    def __repr__(self):
+        return "task " + str(self.name) + " methods:\n" + str(self.methods)
 
 
 class TreeMethod:
@@ -28,6 +36,12 @@ class TreeMethod:
         self.f_predcond = []
         self.t_predcond = []
         self.subtasks = []
+
+    def __str__(self):
+        return "method " + str(self.name) + ' subtasks: \n' + str(self.subtasks)
+
+    def __repr__(self):
+        return "method " + str(self.name) + ' subtasks: \n' + str(self.subtasks)
 
 
 class TreePred:
@@ -52,14 +66,19 @@ class TreeOperator:
         self.f_effects = []
         self.t_effects = []
 
+    def __str__(self):
+        return "operator " + str(self.name) + '\n'
 
-def ground_task (task, params, taskDict):
+    def __repr__(self):
+        return "operator " + str(self.name) + '\n'
+
+
+def ground_task(task, params, taskDict):
     dic = dict()
+    ans = TreeTask()
     for i in range(len(params)):
         dic[taskDict[task].params[i].name] = params[i]
-    print(dic)
-    print(taskDict[task].name, taskDict[task].type)
-    ans = TreeTask()
+        ans.params.append(params[i])
     ans.name = task
     if taskDict[task].type == 0:
         ans.type = 0
@@ -100,6 +119,7 @@ def ground_task (task, params, taskDict):
         ans.type = 1
         for m in taskDict[task].things:
             n_el = TreeMethod()
+            n_el.name = m.name
             n_el.type = m.type
             for pre in m.precond[0]:
                 p = TreePred()
@@ -126,12 +146,14 @@ def ground_files(domain_name, task_name):
     parsed_domain = dp.parse_domain(domain_name)
     parsed_task = tp.parse_task(task_name)
     ans = GrounderAns()
-    print(len(parsed_task.goal))
     for el in parsed_task.goal:
         ans.tasks.append(ground_task(el.name, el.params, parsed_domain.tasks))
     ans.types = parsed_domain.types
     ans.axioms = parsed_domain.axioms
     ans.init_state = parsed_task.pred
+    for pred in parsed_domain.pred:
+        if not ans.init_state.get(pred.name):
+           ans.init_state[pred.name] = []
     return ans
 
 

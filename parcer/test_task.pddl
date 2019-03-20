@@ -15,7 +15,7 @@ r - robot
 
 )
 
-(:goal (get_two p2 p3 p1 o1 o2 r) )
+(:goal (get_from p2 p1 o1 r) )
 
 
 )

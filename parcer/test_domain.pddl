@@ -44,7 +44,7 @@
                     (() )
     )
 
-    (:method        get_two do_nothing ordered 2
+    (:method        get_two divide ordered 2
                     ((on ?o1 ?from1) (on ?o2 ?from2) )
                     ((get_from ?from1 ?now ?o1 ?r) (get_from ?from2 ?now ?o2 ?r) )
     )
